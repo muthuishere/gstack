@@ -142,7 +142,7 @@
 ### Fixed
 
 - **`/retro` now counts full calendar days.** Running a retro late at night no longer silently misses commits from earlier in the day. Git treats bare dates like `--since="2026-03-11"` as "11pm on March 11" if you run it at 11pm — now we pass `--since="2026-03-11T00:00:00"` so it always starts from midnight. Compare mode windows get the same fix.
-- **Review log no longer breaks on branch names with `/`.** Branch names like `garrytan/design-system` caused review log writes to fail because Claude Code runs multi-line bash blocks as separate shell invocations, losing variables between commands. New `gstack-review-log` and `gstack-review-read` atomic helpers encapsulate the entire operation in a single command.
+- **Review log no longer breaks on branch names with `/`.** Branch names like `user/design-system` caused review log writes to fail because Claude Code runs multi-line bash blocks as separate shell invocations, losing variables between commands. New `gstack-review-log` and `gstack-review-read` atomic helpers encapsulate the entire operation in a single command.
 - **All skill templates are now platform-agnostic.** Removed Rails-specific patterns (`bin/test-lane`, `RAILS_ENV`, `.includes()`, `rescue StandardError`, etc.) from `/ship`, `/review`, `/plan-ceo-review`, and `/plan-eng-review`. The review checklist now shows examples for Rails, Node, Python, and Django side-by-side.
 - **`/ship` reads CLAUDE.md to discover test commands** instead of hardcoding `bin/test-lane` and `npm run test`. If no test commands are found, it asks the user and persists the answer to CLAUDE.md.
 
@@ -312,7 +312,7 @@ Every gstack skill now follows the **Completeness Principle**: always recommend 
 full implementation when AI makes the marginal cost near-zero. No more "Choose B
 because it's 90% of the value" when option A is 70 lines more code.
 
-Read the philosophy: https://garryslist.org/posts/boil-the-ocean
+Read the philosophy: See ETHOS.md in the gstack repo.
 
 - **Completeness scoring**: every AskUserQuestion option now shows a completeness
   score (1-10), biasing toward the complete solution

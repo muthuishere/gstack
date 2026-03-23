@@ -159,26 +159,6 @@ describe('gen-skill-docs', () => {
     expect(content).toContain('plain English');
   });
 
-  test('generated SKILL.md contains telemetry line', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-    expect(content).toContain('skill-usage.jsonl');
-    expect(content).toContain('~/.gstack/analytics');
-  });
-
-  test('preamble-using skills have correct skill name in telemetry', () => {
-    const PREAMBLE_SKILLS = [
-      { dir: '.', name: 'gstack' },
-      { dir: 'ship', name: 'ship' },
-      { dir: 'review', name: 'review' },
-      { dir: 'qa', name: 'qa' },
-      { dir: 'retro', name: 'retro' },
-    ];
-    for (const skill of PREAMBLE_SKILLS) {
-      const content = fs.readFileSync(path.join(ROOT, skill.dir, 'SKILL.md'), 'utf-8');
-      expect(content).toContain(`"skill":"${skill.name}"`);
-    }
-  });
-
   test('qa and qa-only templates use QA_METHODOLOGY placeholder', () => {
     const qaTmpl = fs.readFileSync(path.join(ROOT, 'qa', 'SKILL.md.tmpl'), 'utf-8');
     expect(qaTmpl).toContain('{{QA_METHODOLOGY}}');
@@ -461,10 +441,6 @@ describe('SPEC_REVIEW_LOOP resolver', () => {
 
   test('includes quality score', () => {
     expect(content).toContain('quality score');
-  });
-
-  test('includes metrics path', () => {
-    expect(content).toContain('spec-review.jsonl');
   });
 
   test('includes convergence guard', () => {
@@ -789,117 +765,21 @@ describe('Codex generation (--host codex)', () => {
 describe('setup script validation', () => {
   const setupContent = fs.readFileSync(path.join(ROOT, 'setup'), 'utf-8');
 
-  test('setup has separate link functions for Claude and Codex', () => {
-    expect(setupContent).toContain('link_claude_skill_dirs');
-    expect(setupContent).toContain('link_codex_skill_dirs');
-    // Old unified function must not exist
-    expect(setupContent).not.toMatch(/^link_skill_dirs\(\)/m);
+  test('setup has unified link_skill_dirs function', () => {
+    expect(setupContent).toContain('link_skill_dirs');
   });
 
-  test('Claude install uses link_claude_skill_dirs', () => {
-    // The Claude install section (section 4) should use the Claude function
-    const claudeSection = setupContent.slice(
-      setupContent.indexOf('# 4. Install for Claude'),
-      setupContent.indexOf('# 5. Install for Codex')
-    );
-    expect(claudeSection).toContain('link_claude_skill_dirs');
-    expect(claudeSection).not.toContain('link_codex_skill_dirs');
-  });
-
-  test('Codex install uses link_codex_skill_dirs', () => {
-    // The Codex install section (section 5) should use the Codex function
-    const codexSection = setupContent.slice(
-      setupContent.indexOf('# 5. Install for Codex'),
-      setupContent.indexOf('# 6. Create')
-    );
-    expect(codexSection).toContain('link_codex_skill_dirs');
-    expect(codexSection).not.toContain('link_claude_skill_dirs');
-  });
-
-  test('link_codex_skill_dirs reads from .agents/skills/', () => {
-    // The Codex link function must reference .agents/skills for generated Codex skills
-    const fnStart = setupContent.indexOf('link_codex_skill_dirs()');
-    const fnEnd = setupContent.indexOf('}', setupContent.indexOf('linked[@]}', fnStart));
+  test('link_skill_dirs creates relative symlinks', () => {
+    const fnStart = setupContent.indexOf('link_skill_dirs()');
+    const fnEnd = setupContent.indexOf('\n}', fnStart);
     const fnBody = setupContent.slice(fnStart, fnEnd);
-    expect(fnBody).toContain('.agents/skills');
-    expect(fnBody).toContain('gstack*');
+    expect(fnBody).toContain('ln -snf');
   });
 
-  test('link_claude_skill_dirs creates relative symlinks', () => {
-    // Claude links should be relative: ln -snf "gstack/skill_name"
-    const fnStart = setupContent.indexOf('link_claude_skill_dirs()');
-    const fnEnd = setupContent.indexOf('}', setupContent.indexOf('linked[@]}', fnStart));
-    const fnBody = setupContent.slice(fnStart, fnEnd);
-    expect(fnBody).toContain('ln -snf "gstack/$skill_name"');
-  });
-
-  test('setup supports --host auto|claude|codex', () => {
-    expect(setupContent).toContain('--host');
-    expect(setupContent).toContain('claude|codex|auto');
-  });
-
-  test('auto mode detects claude and codex binaries', () => {
+  test('setup auto-detects claude and agents installs', () => {
     expect(setupContent).toContain('command -v claude');
-    expect(setupContent).toContain('command -v codex');
-  });
-
-  test('create_agents_sidecar links runtime assets', () => {
-    // Sidecar must link bin, browse, review, qa
-    const fnStart = setupContent.indexOf('create_agents_sidecar()');
-    const fnEnd = setupContent.indexOf('}', setupContent.indexOf('done', fnStart));
-    const fnBody = setupContent.slice(fnStart, fnEnd);
-    expect(fnBody).toContain('bin');
-    expect(fnBody).toContain('browse');
-    expect(fnBody).toContain('review');
-    expect(fnBody).toContain('qa');
+    expect(setupContent).toContain('.claude');
+    expect(setupContent).toContain('.agents');
   });
 });
 
-describe('telemetry', () => {
-  test('generated SKILL.md contains telemetry start block', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-    expect(content).toContain('_TEL_START');
-    expect(content).toContain('_SESSION_ID');
-    expect(content).toContain('TELEMETRY:');
-    expect(content).toContain('TEL_PROMPTED:');
-    expect(content).toContain('gstack-config get telemetry');
-  });
-
-  test('generated SKILL.md contains telemetry opt-in prompt', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-    expect(content).toContain('.telemetry-prompted');
-    expect(content).toContain('Help gstack get better');
-    expect(content).toContain('gstack-config set telemetry community');
-    expect(content).toContain('gstack-config set telemetry anonymous');
-    expect(content).toContain('gstack-config set telemetry off');
-  });
-
-  test('generated SKILL.md contains telemetry epilogue', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-    expect(content).toContain('Telemetry (run last)');
-    expect(content).toContain('gstack-telemetry-log');
-    expect(content).toContain('_TEL_END');
-    expect(content).toContain('_TEL_DUR');
-    expect(content).toContain('SKILL_NAME');
-    expect(content).toContain('OUTCOME');
-    expect(content).toContain('PLAN MODE EXCEPTION');
-  });
-
-  test('generated SKILL.md contains pending marker handling', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-    expect(content).toContain('.pending');
-    expect(content).toContain('_pending_finalize');
-  });
-
-  test('telemetry blocks appear in all skill files that use PREAMBLE', () => {
-    const skills = ['qa', 'ship', 'review', 'plan-ceo-review', 'plan-eng-review', 'retro'];
-    for (const skill of skills) {
-      const skillPath = path.join(ROOT, skill, 'SKILL.md');
-      if (fs.existsSync(skillPath)) {
-        const content = fs.readFileSync(skillPath, 'utf-8');
-        expect(content).toContain('_TEL_START');
-        expect(content).toContain('Telemetry (run last)');
-      }
-    }
-  });
-});

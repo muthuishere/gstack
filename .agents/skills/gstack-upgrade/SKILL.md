@@ -114,10 +114,21 @@ git reset --hard origin/main
 If `$STASH_OUTPUT` contains "Saved working directory", warn the user: "Note: local changes were stashed. Run `git stash pop` in the skill directory to restore them."
 
 **For vendored installs** (vendored, vendored-global):
+
+First, detect the clone URL from the installed git remote (so forks upgrade from the right repo):
 ```bash
-PARENT=$(dirname "$INSTALL_DIR")
+CLONE_URL="https://github.com/muthuishere/gstack.git"
+if [ -d "$INSTALL_DIR/.git" ]; then
+  _ORIGIN="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
+  [ -n "$_ORIGIN" ] && CLONE_URL="$_ORIGIN"
+fi
+echo "CLONE_URL=$CLONE_URL"
+```
+
+Then clone and replace:
+```bash
 TMP_DIR=$(mktemp -d)
-git clone --depth 1 https://github.com/garrytan/gstack.git "$TMP_DIR/gstack"
+git clone --depth 1 "$CLONE_URL" "$TMP_DIR/gstack"
 mv "$INSTALL_DIR" "$INSTALL_DIR.bak"
 mv "$TMP_DIR/gstack" "$INSTALL_DIR"
 cd "$INSTALL_DIR" && ./setup
