@@ -1,81 +1,48 @@
 #!/usr/bin/env bash
-# gstack uninstall — removes skill symlinks installed by ./setup
+# gstack uninstall — removes skill symlinks from ~/.claude/skills and ~/.agents/skills
 set -e
 
 GSTACK_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-home_dir() {
-  echo "${HOME:-$(cd ~ && pwd)}"
-}
-
-# Remove a symlink if its resolved target is inside GSTACK_DIR (or matches a pattern)
-remove_if_gstack_link() {
-  local link="$1"
-  [ -L "$link" ] || return 0
-  local target
-  target="$(readlink "$link")"
-  # Relative symlinks like "gstack/ship" or absolute paths inside GSTACK_DIR
-  case "$target" in
-    gstack/*|"$GSTACK_DIR"*) rm -f "$link" && echo "  removed: $link" ;;
-  esac
-}
-
-remove_absolute_link() {
-  local link="$1"
-  if [ -L "$link" ]; then
-    rm -f "$link"
-    echo "  removed: $link"
-  fi
-}
-
 REMOVED=0
+
+remove_gstack_links() {
+  local skills_dir="$1"
+  [ -d "$skills_dir" ] || return 0
+  echo "Checking $skills_dir..."
+  for link in "$skills_dir"/*/; do
+    link="${link%/}"
+    [ -L "$link" ] || continue
+    target="$(readlink "$link")"
+    case "$target" in
+      gstack/*|"$GSTACK_DIR"*)
+        rm -f "$link"
+        echo "  removed: $link"
+        REMOVED=1
+        ;;
+    esac
+  done
+}
 
 echo
 echo "Uninstalling gstack..."
 echo
 
-# ── Claude Code: ~/.claude/skills/<skill_name> ──────────────────────────
-CLAUDE_SKILLS="$(home_dir)/.claude/skills"
-if [ -d "$CLAUDE_SKILLS" ]; then
-  echo "Checking Claude Code skills ($CLAUDE_SKILLS)..."
-  for link in "$CLAUDE_SKILLS"/*/; do
-    link="${link%/}"
-    [ -e "$link" ] || continue
-    before="$(ls -la "$CLAUDE_SKILLS" | wc -l)"
-    remove_if_gstack_link "$link" && REMOVED=1 || true
-  done
-else
-  echo "  Claude skills dir not found — skipping"
-fi
-
-# ── Codex: ~/.codex/skills/gstack + gstack-* ────────────────────────────
-CODEX_SKILLS="$(home_dir)/.codex/skills"
-if [ -d "$CODEX_SKILLS" ]; then
-  echo "Checking Codex skills ($CODEX_SKILLS)..."
-  remove_absolute_link "$CODEX_SKILLS/gstack" && REMOVED=1 || true
-  for link in "$CODEX_SKILLS"/gstack-*/; do
-    link="${link%/}"
-    [ -e "$link" ] || [ -L "$link" ] || continue
-    remove_absolute_link "$link" && REMOVED=1 || true
-  done
-else
-  echo "  Codex skills dir not found — skipping"
-fi
+remove_gstack_links "$HOME/.claude/skills"
+remove_gstack_links "$HOME/.agents/skills"
 
 # ── ~/.gstack data directory ─────────────────────────────────────────────
-GSTACK_DATA="$(home_dir)/.gstack"
-if [ -d "$GSTACK_DATA" ]; then
+if [ -d "$HOME/.gstack" ]; then
   echo
   printf "Remove ~/.gstack data directory (eval history, project state)? [y/N] "
   read -r answer </dev/tty
   case "$answer" in
     [Yy]*)
-      rm -rf "$GSTACK_DATA"
-      echo "  removed: $GSTACK_DATA"
+      rm -rf "$HOME/.gstack"
+      echo "  removed: $HOME/.gstack"
       REMOVED=1
       ;;
     *)
-      echo "  kept: $GSTACK_DATA"
+      echo "  kept: $HOME/.gstack"
       ;;
   esac
 fi
