@@ -208,10 +208,6 @@ The models are getting better fast. The people who figure out how to work with t
 
 Eighteen specialists and seven power tools. All slash commands. All Markdown. All free. **[github.com/garrytan/gstack](https://github.com/garrytan/gstack)** — MIT License
 
-> **We're hiring.** Want to ship 10K+ LOC/day and help harden gstack?
-> Come work at YC — [ycombinator.com/software](https://ycombinator.com/software)
-> Extremely competitive salary and equity. San Francisco, Dogpatch District.
-
 ## Docs
 
 | Doc | What it covers |
