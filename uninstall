@@ -9,6 +9,7 @@ remove_gstack_links() {
   local skills_dir="$1"
   [ -d "$skills_dir" ] || return 0
   echo "Checking $skills_dir..."
+  # Remove per-skill symlinks pointing to gstack/<skill>
   for link in "$skills_dir"/*/; do
     link="${link%/}"
     [ -L "$link" ] || continue
@@ -21,6 +22,12 @@ remove_gstack_links() {
         ;;
     esac
   done
+  # Remove the gstack directory symlink itself
+  if [ -L "$skills_dir/gstack" ]; then
+    rm -f "$skills_dir/gstack"
+    echo "  removed: $skills_dir/gstack"
+    REMOVED=1
+  fi
 }
 
 echo
@@ -30,26 +37,10 @@ echo
 remove_gstack_links "$HOME/.claude/skills"
 remove_gstack_links "$HOME/.agents/skills"
 
-# ── ~/.gstack data directory ─────────────────────────────────────────────
-if [ -d "$HOME/.gstack" ]; then
-  echo
-  printf "Remove ~/.gstack data directory (eval history, project state)? [y/N] "
-  read -r answer </dev/tty
-  case "$answer" in
-    [Yy]*)
-      rm -rf "$HOME/.gstack"
-      echo "  removed: $HOME/.gstack"
-      REMOVED=1
-      ;;
-    *)
-      echo "  kept: $HOME/.gstack"
-      ;;
-  esac
-fi
-
 echo
 if [ "$REMOVED" -eq 0 ]; then
   echo "Nothing to uninstall — gstack does not appear to be installed."
 else
   echo "gstack uninstalled."
+  echo "  ~/.gstack/ data kept (project state, eval history)."
 fi
