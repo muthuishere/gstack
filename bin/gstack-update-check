@@ -18,7 +18,22 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$GSTACK_DIR/VERSION"
-REMOTE_URL="${GSTACK_REMOTE_URL:-https://raw.githubusercontent.com/garrytan/gstack/main/VERSION}"
+# Derive REMOTE_URL from git remote origin so forks upgrade from the right repo.
+# Priority: env var > git remote > hardcoded fallback
+if [ -n "${GSTACK_REMOTE_URL:-}" ]; then
+  REMOTE_URL="$GSTACK_REMOTE_URL"
+elif [ -d "$GSTACK_DIR/.git" ]; then
+  _ORIGIN="$(git -C "$GSTACK_DIR" remote get-url origin 2>/dev/null || true)"
+  # Normalise SSH (git@github.com:user/repo.git) and HTTPS to raw URL
+  _GH_PATH="$(echo "$_ORIGIN" | sed 's|git@github\.com:||;s|https://github\.com/||;s|\.git$||')"
+  if echo "$_GH_PATH" | grep -qE '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
+    REMOTE_URL="https://raw.githubusercontent.com/$_GH_PATH/main/VERSION"
+  else
+    REMOTE_URL="https://raw.githubusercontent.com/muthuishere/gstack/main/VERSION"
+  fi
+else
+  REMOTE_URL="https://raw.githubusercontent.com/muthuishere/gstack/main/VERSION"
+fi
 
 # ─── Force flag (busts cache for standalone /gstack-upgrade) ──
 if [ "${1:-}" = "--force" ]; then
